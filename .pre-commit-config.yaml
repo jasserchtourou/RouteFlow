@@ -1,0 +1,50 @@
+# Run automatically on `git commit` once installed:  pre-commit install --install-hooks
+# Run on everything manually:                         pre-commit run --all-files
+# (pre-commit comes from the backend dev dependencies: `cd backend && uv run pre-commit ...`)
+default_install_hook_types: [pre-commit, pre-push]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=2048]
+      - id: detect-private-key
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.10  # keep in sync with the ruff version in backend/uv.lock
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      # Strict type checking of the whole backend (needs the project's own virtualenv).
+      - id: mypy
+        name: mypy (strict)
+        entry: uv --directory backend run mypy app tests
+        language: system
+        pass_filenames: false
+        files: ^backend/.*\.py$
+
+      # Secrets live in .env, which must never be committed (.env.example is fine).
+      - id: forbid-env-file
+        name: forbid committing .env files
+        entry: ".env files hold secrets; commit .env.example instead"
+        language: fail
+        files: (^|/)\.env$
+
+      # Fast tests only; the database tests run in CI / manually (`uv run pytest`).
+      - id: pytest-unit
+        name: unit tests
+        entry: uv --directory backend run pytest -m "not integration" -q
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

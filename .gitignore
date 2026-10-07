@@ -1,0 +1,31 @@
+.env
+# Personal screenshots dropped in the project folder; curated images live in docs/
+Screenshot*.png
+.coverage
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+.next/
+*.log
+
+# Local tool settings and personal files
+.claude/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Third-party reference screenshots (someone else's demo): kept locally, not published
+docs/reference/
+
+# Environment files: only the example is committed
+.env.*
+!.env.example
+
+# Build and test output
+coverage/
+*.tsbuildinfo

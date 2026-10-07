@@ -1,0 +1,56 @@
+# `docker compose up -d --build`    -> postgres + backend (migrations run on start) + frontend
+# `docker compose up -d postgres`   -> database only, backend runs on the host (uv run uvicorn ...)
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: routeflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-routeflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-routeflow}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-routeflow} -d ${POSTGRES_DB:-routeflow}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: routeflow-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      BUSINESS_TIMEZONE: ${BUSINESS_TIMEZONE:-Europe/Berlin}
+      YARD_SIMULATION_ENABLED: ${YARD_SIMULATION_ENABLED:-true}
+      # Inside the compose network the database is reachable as "postgres" on its internal
+      # port 5432, regardless of the host port published above.
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-routeflow}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-routeflow}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Inlined into the browser bundle: the address of the API as YOUR BROWSER reaches it.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+    container_name: routeflow-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+
+volumes:
+  postgres_data:
