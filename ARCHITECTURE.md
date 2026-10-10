@@ -12,18 +12,12 @@ backend/app/
   api/                    top-level router, shared dependencies, /api/v1 versioning
   modules/<domain>/       one folder per domain: orders, warehouses, inventory,
                           shipments, routes, tracking, vehicles, drivers, exceptions,
-                          dashboard, documents
+                          dashboard, yard
       models.py           SQLAlchemy models
       schemas.py          Pydantic request/response models
       repository.py       DB queries (only where it earns its keep)
       service.py          business rules, transactions
       router.py           HTTP endpoints (thin)
-  ai/
-    rag/                  chunking, embeddings, vector search
-    tools/                narrow typed tools wrapping services
-    agents/               Pydantic AI agents
-    prompts/              instructions (no business logic)
-    evaluation/           datasets + eval runner
 backend/alembic/          migrations
 backend/tests/
 ```
@@ -39,10 +33,10 @@ sketch: it keeps related code together and avoids cross-cutting giant folders.)
 Order 1—* Shipment; Warehouse 1—* InventoryItem; Warehouse 1—* Shipment;
 Vehicle 1—* Shipment; Route *—* Shipment (via shipment.route_id, decided in Phase 2);
 Shipment 1—* TrackingEvent; Shipment 1—* Exception; Vehicle *—1 Driver (assignment);
-Document 1—* DocumentChunk (embedding vector).
+Warehouse 1—* Dock / Equipment; Dock 1—* DockAppointment (truck visit).
 
 Entities: Order, Warehouse, InventoryItem, Shipment, Route, Vehicle, Driver,
-TrackingEvent, Exception, Document, DocumentChunk. Field lists follow the project brief and
+TrackingEvent, Exception, Dock, Equipment, DockAppointment. Field lists follow the project brief and
 will be refined in Phase 2. Status fields are DB-backed enums; all tables have
 `created_at/updated_at`; UUID primary keys; human-readable numbers like `SHP-2211` are separate unique columns.
 
@@ -56,61 +50,36 @@ Exception types: DELAYED, TEMPERATURE_DEVIATION, DAMAGED, MISSING_DOCUMENT, STOC
 - Pydantic v2 schemas separate from ORM models (Create / Update / Read).
 - Pagination (`limit/offset`, with total), filtering and sorting via query params.
 - Consistent error envelope; domain errors mapped to HTTP codes in one place.
-- Read endpoints are designed to double as sources for agent tools.
 - Auth is deferred until the core works.
 
 ## 4. Database strategy
 
-- PostgreSQL 16 with the `pgvector` extension (image `pgvector/pgvector:pg16`).
+- PostgreSQL 16 (official `postgres:16` image).
 - SQLAlchemy 2.x async (`asyncpg`), one session per request via FastAPI dependency;
   services commit, repositories never do.
-- Alembic for all schema changes, including `CREATE EXTENSION vector`. No `create_all` outside tests.
+- Alembic for all schema changes. No `create_all` outside tests.
 - Indexes on foreign keys and frequent filters (status, destination, timestamps); add more only after measuring (Phase 21).
 - Separate test database; seed script for realistic dev data.
 
 ## 5. Testing strategy
 
 - pytest + pytest-asyncio + httpx `AsyncClient` against the ASGI app.
-- Tests run against real PostgreSQL (with pgvector), not SQLite, to avoid dialect drift;
+- Tests run against real PostgreSQL, not SQLite, to avoid dialect drift;
   each test isolated by transaction rollback.
 - Layers: unit (pure logic, e.g. status transitions), service, API integration, validation.
-- AI: tools are tested like any service; the agent is tested with Pydantic AI's `TestModel`/`FunctionModel` (no network); quality is measured separately by the evaluation suite.
 - Concurrency: race conditions in write paths are reproduced with two real sessions on committed
   data (A works without committing, B must block, then A finishes), not mocked.
 - Quality gates: ruff (incl. security, async and pytest-style rules), strict mypy, `alembic check`
   (a test fails when a model changes without a migration), warnings as errors, randomised test
   order, coverage floor of 95 % (line + branch), pre-commit hooks (see `.pre-commit-config.yaml`).
 
-## 6. AI / RAG strategy
-
-**Two kinds of truth, kept separate:**
-- *Current operational data* → only from typed application tools.
-- *Procedures / documentation* → only from the pgvector knowledge base.
-
-**RAG pipeline (Phase 13, before any agent):** documents → chunking → embeddings
-(sentence-transformers behind an `Embedder` interface) → `document_chunks.embedding vector(N)`
-→ cosine search (HNSW index) → `search_documents(query, k)`.
-
-**Agent (Phases 14–17):** Pydantic AI agent; model chosen by env (`LLM_PROVIDER`, `LLM_MODEL`,
-default Ollama). Tools are thin, narrowly typed wrappers over existing services
-(`get_shipment`, `get_delayed_shipments`, `search_knowledge_base`, ...). The model picks
-tools in a loop; there are no hard-coded question→tool workflows.
-Final output is a structured `InvestigationResult` (summary, confidence, findings, evidence,
-recommended actions, affected shipments/routes).
-
-**Guardrails:** no LLM database access, no SQL tools, validated tool inputs, read-only tools,
-business logic in Python (never prompts), "insufficient evidence" is an allowed answer.
-
-**Evaluation (Phase 20):** question dataset with expected tools/facts; metrics: correctness,
-retrieval relevance, citation correctness, tool selection, hallucination rate, tool-call count, latency.
-
-## 7. Frontend strategy
+## 6. Frontend strategy
 
 Next.js (App Router) + TypeScript + Tailwind + shadcn/ui; TanStack Query for server state;
 Motion for subtle animation. Frontend never re-implements business rules; it renders API data.
 A typed API client is generated from/aligned with the FastAPI OpenAPI schema.
 Built shell-first with mock data, then wired to the backend (Phase 11).
-Routes: `/dashboard /orders /shipments /warehouses /routes /tracking /events /ai`.
+Routes: `/dashboard /orders /shipments /warehouses /warehouses/[id]/3d /routes /tracking /events`.
 
 ### 3D warehouse digital twin (Phase 12.5)
 Inspired by the "WareTrack" demo (reference screenshots: `docs/reference/3d-warehouse-ref-*.jpg`).
@@ -158,22 +127,19 @@ Original implementation in RouteFlow's own branding, not a copy. Route `/warehou
 - Accessibility/performance: lazy-loaded canvas, instancing, reduced-motion support, and the
   same data available as plain tables (the ops list) without WebGL.
 
-## 8. Infrastructure
+## 7. Infrastructure
 
-Docker Compose: `postgres` (pgvector) now; `backend` (Phase 8, done); `frontend` optional.
-Ollama runs on the host or as an optional compose profile. No Redis/Celery until a real
-background-job need appears (e.g. async ingestion or scheduled insight generation).
+Docker Compose: `postgres`, `backend` (migrations run on start) and `frontend`, all with
+health checks; multi-stage, non-root images. No Redis/Celery until a real background-job need
+appears (the yard simulator runs in-process).
 
-## 9. Key decisions log
+## 8. Key decisions log
 
 | Decision | Reason |
 |----------|--------|
 | Modular monolith | Simplicity, one deploy, clear seams |
 | Per-module folders | Cohesion over layer-global folders |
-| Postgres + pgvector for vectors | One datastore, transactional, no extra service |
-| Real Postgres in tests | Catches enum/index/pgvector behavior SQLite can't |
-| Provider-independent LLM/embeddings | Free local dev, swap to hosted later |
-| Tools wrap services | Single source of business logic, auditable agent access |
+| Real Postgres in tests | Catches enum/index/constraint behavior SQLite can't |
 | UUID primary keys | Non-guessable ids in URLs, safe to generate client-side |
 | VARCHAR+CHECK enums | Easy to evolve in migrations; DB still enforces validity |
 | `lazy="raise"` relationships | No hidden queries in async code; prevents N+1 |
@@ -183,7 +149,7 @@ background-job need appears (e.g. async ingestion or scheduled insight generatio
 | Validate -> apply -> commit once | Multi-table writes (event, shipment, exception, order) are atomic |
 | Row lock on event recording | Concurrent scanner events can't both pass the next-step check |
 | Partial unique index for active incidents | DB guarantees one active exception per type; history unlimited |
-| Explainable route risk score | Weighted, capped, with stated factors: testable and citable by the AI agent |
+| Explainable route risk score | Weighted, capped, with stated factors: testable and shown to the user |
 | Business timezone + injectable clock | "Today" is the operator's calendar day; time-dependent logic is testable |
 | Row locks for related write paths | Manual and automatic exception creation both lock the shipment, so they serialize instead of deadlocking |
 | Safety guards raise, never `assert` | Asserts are stripped under `python -O`; guards on destructive actions must not be |

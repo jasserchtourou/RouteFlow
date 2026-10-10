@@ -194,7 +194,12 @@ export function SiteView({ warehouseId }: { warehouseId: string }) {
               ) : (
                 <span />
               )}
-              <OpsList scene={scene} selection={shown} onSelect={interaction.select} />
+              <OpsList
+                scene={scene}
+                nowMs={sceneNow()}
+                selection={shown}
+                onSelect={interaction.select}
+              />
             </div>
           </div>
         )}

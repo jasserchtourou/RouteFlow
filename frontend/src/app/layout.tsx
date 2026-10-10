@@ -8,7 +8,8 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   title: { default: "RouteFlow", template: "%s · RouteFlow" },
-  description: "Logistics operations platform with an agentic RAG assistant.",
+  description:
+    "Logistics operations platform: orders, shipments, live tracking and 3D warehouse operations.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

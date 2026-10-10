@@ -69,12 +69,15 @@ function Rig({
 }) {
   const controls = useRef<Controls>(null);
   const userMoved = useRef(false);
+  const introStarted = useRef(false);
+  const introPlaying = useRef(false);
   const size = useThree((state) => state.size);
 
+  /** Frames the site; returns the zoom it chose (null before the controls exist). */
   const fit = useCallback(
-    (animate: boolean) => {
+    (animate: boolean): number | null => {
       const c = controls.current;
-      if (!c) return;
+      if (!c) return null;
       const camera = c.camera as OrthographicCamera;
       const minZ = -17;
       const maxZ = 26;
@@ -102,13 +105,15 @@ function Rig({
         (freeWidth - 2 * FIT_MARGIN_PX) / (maxX - minX),
         (freeHeight - 2 * FIT_MARGIN_PX) / (maxY - minY),
       );
+      const clamped = Math.min(45, Math.max(4, zoom));
       void c.moveTo(0, 0, (minZ + maxZ) / 2, false);
-      void c.zoomTo(Math.min(45, Math.max(4, zoom)), animate);
+      void c.zoomTo(clamped, animate);
       // Centre the site in the free part of the canvas, not behind the panels.
       const shiftX = (insets.left - insets.right) / 2;
       const shiftY = (insets.top - insets.bottom) / 2;
       const scale = Math.max(zoom, 1);
       if (shiftX !== 0 || shiftY !== 0) void c.truck(-shiftX / scale, shiftY / scale, false);
+      return clamped;
     },
     [halfWidth, insets.left, insets.right, insets.top, insets.bottom, size.width, size.height],
   );
@@ -118,7 +123,20 @@ function Rig({
     const c = controls.current;
     if (!c) return;
     c.setLookAt(36, 34, 42, 0, 0, 6, false);
-    fit(false);
+    const zoom = fit(false);
+    if (!introStarted.current && zoom !== null && !prefersReducedMotion()) {
+      // Once per visit: start wide and turned a little, then glide into the framed view.
+      introStarted.current = true;
+      introPlaying.current = true;
+      c.smoothTime = 0.9;
+      void c.zoomTo(zoom * 0.45, false);
+      void c.rotate(-0.45, 0, false);
+      void c.zoomTo(zoom, true);
+      void c.rotate(0.45, 0, true).then(() => {
+        introPlaying.current = false;
+        if (controls.current) controls.current.smoothTime = 0.25;
+      });
+    }
     const stop = () => {
       userMoved.current = true;
     };
@@ -128,7 +146,7 @@ function Rig({
 
   // Keep the site framed while the window or the panel layout changes size.
   useEffect(() => {
-    if (!userMoved.current) fit(false);
+    if (!userMoved.current && !introPlaying.current) fit(false);
   }, [fit]);
 
   useImperativeHandle(apiRef, () => {
@@ -214,7 +232,7 @@ export default function SiteCanvas({
   return (
     <Canvas
       orthographic
-      shadows="percentage"
+      shadows="soft"
       dpr={[1, 2]}
       camera={{ position: [36, 34, 42], zoom: 15, near: -200, far: 400 }}
       gl={{ antialias: true, toneMapping: ACESFilmicToneMapping, outputColorSpace: SRGBColorSpace }}
@@ -223,7 +241,9 @@ export default function SiteCanvas({
     >
       <color attach="background" args={[palette.background]} />
       <ambientLight intensity={palette.ambient} />
+      <hemisphereLight args={[palette.sky, palette.ground, palette.hemi]} />
       <directionalLight
+        shadow-bias={-0.0004}
         position={[30, 50, 25]}
         intensity={palette.sun}
         castShadow
@@ -240,6 +260,7 @@ export default function SiteCanvas({
       <FleetDriver fleet={fleet} scene={scene} getNow={getNow} />
       <Environment dockCount={scene.dockCount} yardSlots={scene.yardSlots} palette={palette} />
       <Building
+        code={scene.warehouse.code}
         docks={scene.docks}
         dockCount={scene.dockCount}
         palette={palette}

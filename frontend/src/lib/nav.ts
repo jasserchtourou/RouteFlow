@@ -1,5 +1,4 @@
 import {
-  Bot,
   Boxes,
   LayoutDashboard,
   Map,
@@ -24,7 +23,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/routes", label: "Routes", icon: Route },
   { href: "/tracking", label: "Tracking", icon: Map },
   { href: "/events", label: "Events", icon: ScrollText },
-  { href: "/ai", label: "AI Assistant", icon: Bot },
 ];
 
 /** A nav item is active on its own path and on any nested path (/orders/ORD-1). */

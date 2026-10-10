@@ -3,21 +3,18 @@
 Working context for contributors and AI coding sessions. Keep this current.
 
 ## Project
-RouteFlow — logistics operations platform with an Agentic RAG assistant.
+RouteFlow — logistics operations platform (orders, shipments, routes, fleet, warehouses, 3D yard view).
 Repository root: `RouteFlow/`. Platform of the author: Windows 11 (PowerShell/Git Bash).
 
 ## Working rules
 - Build **phase by phase**. After each phase: explain, show decisions and files, run tests, fix, summarize learning, then STOP until told "Continue to Phase X".
 - Don't build future phases early; no speculative abstractions.
-- Learning mode: briefly explain key concepts (DI, async, sessions, repositories, migrations, transactions, indexes, vector search, embeddings, tool calling, agent loops, structured output, RAG) when first used.
+- Learning mode: briefly explain key concepts (DI, async, sessions, repositories, migrations, transactions, indexes) when first used.
 
 ## Non-negotiables
 - Modular monolith; no giant `main.py`/files/functions. Type hints and Pydantic everywhere.
 - Secrets only via environment variables; never committed.
-- LLM never touches the DB directly; no SQL tools; tools are narrow, typed, read-only.
-- Business logic lives in Python services, not prompts.
-- Current operational facts come from tools; procedural knowledge from RAG; agent must cite evidence and may say "insufficient evidence".
-- Don't call it "agentic" unless the model really chooses tools.
+- Business logic lives in Python services; the frontend only renders it.
 - No Redis/Celery until needed. Auth after the core works.
 - Tests accompany each feature; fix root causes, no hacks, no TODO placeholders for core features.
 
@@ -29,7 +26,7 @@ Repository root: `RouteFlow/`. Platform of the author: Windows 11 (PowerShell/Gi
 ## Reference UI
 Dark control-center dashboard: left nav, KPI cards, logistics flow
 (Order → Warehouse → Shipment → Route → Delivery), live events, shipment table,
-fleet map, warehouse status, AI assistant panel. Original implementation, not a copy.
+fleet map, warehouse status. Original implementation, not a copy.
 (The reference screenshot was not attached to the Phase 0 request; please provide it before Phase 9/10.)
 
 ## Current status
@@ -47,7 +44,27 @@ fleet map, warehouse status, AI assistant panel. Original implementation, not a 
 - [x] Phase 11 — Dashboard wired to the API + anime.js animations (25 frontend tests)
 - [x] Phase 12 — Fleet map on /tracking (Leaflet, 34 frontend tests)
 - [x] Phase 12.5 — 3D warehouse digital twin (backend: 430 tests, 100 % coverage; frontend: 63 tests). NOT yet checked visually in a browser by the assistant.
-- [ ] Phase 13 — RAG foundation
+- [x] Phase 12.6 — WareTrack-style polish: 3D network overview (dashboard + /warehouses), site view details + camera fly-in, dock schedule tab, HUD styling (frontend: 122 tests). Checked visually (headless Edge screenshots).
+- [x] Removed (2026-10-10): the planned AI/RAG assistant (Phases 13-20) was dropped from the product; migration `b7c41e2d9a10` drops the `documents` table and the pgvector extension.
+- [ ] Phase 3D-2 — 3D visual upgrade (requested by the author 2026-10-08; see below)
+
+## Planned: 3D visual upgrade (Phase 3D-2)
+Author's request: "buildings / warehouses bigger and better; when two warehouses are near there is
+exchange; trucks of different carriers (e.g. DHL, DPD)". Scope:
+1. **Bigger, more detailed warehouses** — network board: larger halls sized by capacity, multi-part
+   buildings (main hall + office block + canopy), rooftop solar/HVAC, lit windows, fenced lots with
+   parking; site view: taller hall, office annex, visible racks through open doors.
+2. **Exchange between nearby sites** — derive inter-site transfers from existing data (shipments
+   whose origin warehouse and destination city are both RouteFlow sites, e.g. Garbsen -> Hannover
+   18 km, Langenhagen -> Hannover 12 km); draw them on the network board as a highlighted lane with
+   trucks shuttling and a flow label ("GAR -> HAN · 4 transfers today"). Needs a small backend read
+   endpoint (e.g. `GET /warehouses/transfers`) — no new tables.
+3. **Carrier-branded trucks** — `carrier` already exists on shipments and dock visits; map carrier ->
+   livery (cab/trailer colours + name on the trailer side) in one frontend table, used by both the
+   network board and the site view, with a legend.
+   DECIDED (author, 2026-10-08): real carrier names (DHL, DPD, UPS, GLS, ...) as plain text in
+   brand-like colours only — NO logos or logo artwork. Seed/simulator carrier lists change to
+   these names (`app/seed/reference.py` CARRIERS, `modules/yard/simulator.py`).
 
 ## Planned feature: 3D warehouse digital twin (Phase 12.5)
 User request: a feature like the "WareTrack" 3D warehouse demo (LinkedIn post by Stanislav
@@ -58,10 +75,6 @@ Trucks list. Full spec: ARCHITECTURE.md section 7. Backend groundwork: `docks` +
 (Phase 4, done). `dock_appointments` + yard simulator + `GET /warehouses/{id}/scene` were moved
 from Phase 6 to the start of Phase 12.5, to be designed against the real 3D frontend needs.
 Use RouteFlow branding, not WareTrack's.
-
-## Open questions (to settle in later phases)
-- Embedding model and dimension (Phase 13; default candidate `all-MiniLM-L6-v2`, 384 dims)
-- Default local LLM for Ollama with reliable tool calling (Phase 14)
 
 ## Dev notes
 - Backend: `cd backend && uv sync && uv run uvicorn app.main:app --reload`; checks: `uv run pytest`, `uv run ruff check .`, `uv run mypy app tests`. Unit-only: `pytest -m "not integration"`.
@@ -122,7 +135,7 @@ Use RouteFlow branding, not WareTrack's.
 
 ## Frontend shell (Phase 9)
 - `frontend/`: Next.js 15 (App Router, Turbopack) + TypeScript strict + Tailwind v4 + TanStack Query provider + lucide icons + Motion (installed, not used yet). No shadcn CLI: small hand-written primitives in `components/ui`; adopt shadcn components when a phase needs them.
-- Layout: `app/(app)/layout.tsx` wraps all pages in `AppShell` (sidebar >= lg, drawer below, topbar, skip link). Nav is data: `lib/nav.ts` (`NAV_ITEMS`, `isActivePath`). Pages for the 8 planned routes are placeholders (`ComingSoon`) until Phases 10-12/18.
+- Layout: `app/(app)/layout.tsx` wraps all pages in `AppShell` (sidebar >= lg, drawer below, topbar, skip link). Nav is data: `lib/nav.ts` (`NAV_ITEMS`, `isActivePath`). Every route in the nav is a real page.
 - Dark-only palette as semantic tokens in `globals.css` (`bg-surface`, `text-muted`, `text-accent`, ...). Never raw hex in components. Reduced-motion respected.
 - Commands (from `frontend/`): `npm run dev|build|lint|typecheck|test`. Tests: Vitest + Testing Library on **happy-dom** (jsdom 27+ breaks on Node 20.10). Config is `vitest.config.mts` (ESM).
 - Node here is 20.10 (npm warns it wants >=20.17); everything works, but upgrading Node is advisable. `npm audit` reports advisories fixed only by Next 16 (breaking); revisit before Phase 21.
@@ -136,7 +149,7 @@ Use RouteFlow branding, not WareTrack's.
 - Re-seed for fresh demo timestamps: `docker compose run --rm -e RUN_MIGRATIONS=0 backend python -m app.seed --reset`.
 
 ## Orders, Shipments, Routes, Events pages (built after the user noticed they were still placeholders)
-- These four pages had been left as "Arrives in Phase 11/12" stubs when the roadmap numbering shifted; they are real now. Only `/ai` remains a placeholder (Phases 14-19).
+- These four pages had been left as "Arrives in Phase 11/12" stubs when the roadmap numbering shifted; they are real now.
 - Shared list kit (`components/data/`): `DataTable` (sortable headers with `aria-sort`, skeleton rows, empty state, first cell is a real button so rows are keyboard-reachable), `Pagination` (20 per page), `FilterBar` (`SearchField` debounced 300 ms, `ChipFilter` multi-select with `aria-pressed`, `ToggleChip`), `Drawer` (slide-over `aside`, Esc closes, focus moves in). `hooks/use-list-state.ts` keeps filters/sort/page/open item in the URL query string (shareable, back button works; changing a filter resets the page, opening a drawer does not). `features/ops/use-page-query.ts` keeps the previous rows (dimmed) while a new page loads.
 - Orders: filters status/priority/search, sortable columns, drawer lists the order's shipments (`/shipments?search=ORD-...`). Shipments: **open shipments by default** (URL: no `status` = open, `status=all` = no filter, else a list; helpers `selectedStatuses`/`statusParam`), delayed-only and with-exceptions toggles, drawer shows facts, open exceptions and the tracking history (newest first). Routes: "All routes" with status/planned-risk/delayed filters, or "Highest risk first" (`/routes/at-risk`, min level chips); risk shown as a meter + number + level (never colour alone), drawer explains the score with the backend's `factors` and lists the route's shipments. Events: network-wide feed refreshed every 10 s, filters by type/time range/search, links to `/shipments?open=SHP-...`.
 - Backend addition: `GET /api/v1/events` (modules/tracking: `FeedEventRead`, `EventFeedParams`, `TrackingRepository.feed`) - paginated, newest first, filters `event_type[]`, `search` (shipment number, origin, destination, location), `since`. 3 new API tests; backend now 434 tests at 100 % coverage.
@@ -189,7 +202,7 @@ Use RouteFlow branding, not WareTrack's.
 - The UI renders values only; thresholds (utilization HIGH 85 / CRITICAL 95) are display colours mirroring the backend, not business rules. Status is never colour-only (badges carry text, bars are `role=progressbar`).
 - Shared primitives: `Badge` (tones), `Card`, `FadeIn` (Motion, skipped under reduced motion), formatters in `lib/format.ts`.
 - Phase 10 started on mock data; Phase 11 replaced it with the API (mock file deleted).
-- Not yet in the dashboard: fleet map (Phase 12), AI panel (Phase 18), live updates (Phase 11/12). The reference "left nav / KPI / flow / events / table / warehouse" layout is covered except map and AI panel.
+- Not yet in the dashboard: fleet map (Phase 12), live updates (Phase 11/12). The reference "left nav / KPI / flow / events / table / warehouse" layout is covered except the map.
 
 ## Testing and quality (Phase 7)
 - Layout: `tests/unit` (pure rules/schemas, no DB), `tests/service` (use cases called directly), `tests/api` (HTTP -> real PostgreSQL), `tests/db` (constraints, migrations, hybrid properties, seed, races). Anything using the `test_database_url` fixture is auto-marked `integration`.

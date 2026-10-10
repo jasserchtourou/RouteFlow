@@ -2,7 +2,7 @@
 # `docker compose up -d postgres`   -> database only, backend runs on the host (uv run uvicorn ...)
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    image: postgres:16
     container_name: routeflow-postgres
     restart: unless-stopped
     environment:

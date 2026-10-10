@@ -26,7 +26,7 @@ export function Sidebar({
         className={cn("mb-4 flex items-center gap-2 px-3 py-2", collapsed && "px-0")}
         onClick={onNavigate}
       >
-        <span className="grid size-8 place-items-center rounded-lg bg-accent text-accent-fg">
+        <span className="grid size-8 place-items-center rounded-lg bg-linear-to-br from-accent to-[#2f5bd8] text-accent-fg shadow-[0_0_16px_-4px_var(--accent)]">
           <Truck aria-hidden className="size-4" />
         </span>
         <span className={cn("text-lg font-semibold tracking-tight", collapsed && "sr-only")}>
@@ -46,7 +46,7 @@ export function Sidebar({
               "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
               collapsed && "justify-center px-0 size-11",
               active
-                ? "bg-accent/15 text-accent"
+                ? "bg-accent/15 text-accent shadow-[inset_3px_0_0_var(--accent),0_0_18px_-6px_var(--accent)]"
                 : "text-muted hover:bg-surface-hover hover:text-foreground",
             )}
           >

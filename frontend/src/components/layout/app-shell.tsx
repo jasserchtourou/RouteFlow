@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex h-dvh">
       <aside
         className={cn(
-          "hidden shrink-0 border-r border-border bg-surface transition-[width] duration-200 lg:block",
+          "hidden shrink-0 border-r border-border bg-linear-to-b from-surface to-background transition-[width] duration-200 lg:block",
           collapsed ? "w-[4.5rem]" : "w-60",
         )}
       >
@@ -51,7 +51,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           sidebarCollapsed={collapsed}
           onToggleSidebar={() => setCollapsed(!collapsed)}
         />
-        <main id="main" className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <main id="main" className="hud-backdrop flex-1 overflow-y-auto p-4 sm:p-6">
           {children}
         </main>
       </div>

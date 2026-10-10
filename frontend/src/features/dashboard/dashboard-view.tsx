@@ -2,6 +2,7 @@
 
 import { RefreshCw, WifiOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { NetworkOverview } from "@/features/network3d/network-overview";
 import { ApiError } from "@/lib/api";
 import { KpiCards } from "./kpi-cards";
 import { LiveEvents } from "./live-events";
@@ -74,6 +75,7 @@ function Content({ data }: { data: DashboardData }) {
   return (
     <div className="flex flex-col gap-4">
       <KpiCards kpis={data.kpis} />
+      <NetworkOverview />
       <LogisticsFlow stages={data.flow} />
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">

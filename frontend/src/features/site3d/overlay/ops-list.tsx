@@ -9,8 +9,9 @@ import { cn } from "@/lib/utils";
 import type { Selection, SiteScene } from "../model";
 import { isSame } from "../scene/interaction";
 import { NIGHT } from "../scene/palette";
+import { DockSchedule } from "./dock-schedule";
 
-type Tab = "docks" | "forklifts" | "trucks";
+type Tab = "docks" | "schedule" | "forklifts" | "trucks";
 
 const DOCK_TONE: Record<string, Tone> = {
   AVAILABLE: "success",
@@ -74,10 +75,13 @@ function Row({
 
 export function OpsList({
   scene,
+  nowMs,
   selection,
   onSelect,
 }: {
   scene: SiteScene;
+  /** The scene's clock, for the dock schedule's "now" line. */
+  nowMs: number;
   selection: Selection | null;
   onSelect: (selection: Selection) => void;
 }) {
@@ -85,10 +89,14 @@ export function OpsList({
   const activeUnits = scene.equipment.filter((e) => e.status === "ACTIVE").length;
   const tabs: { id: Tab; label: string; count: string }[] = [
     { id: "docks", label: "Docks", count: `${scene.kpis.docksOccupied}/${scene.kpis.docksTotal}` },
+    { id: "schedule", label: "Schedule", count: "" },
     { id: "forklifts", label: "Forklifts", count: `${activeUnits}/${scene.equipment.length}` },
     { id: "trucks", label: "Trucks", count: String(scene.visits.length) },
   ];
-  const summary = tabs.map((t) => `${t.count} ${t.label.toLowerCase()}`).join(" · ");
+  const summary = tabs
+    .filter((t) => t.count)
+    .map((t) => `${t.count} ${t.label.toLowerCase()}`)
+    .join(" · ");
 
   return (
     <Panel id="ops" label="Site operations" title="Operations" icon={ListChecks} summary={summary}>
@@ -112,7 +120,7 @@ export function OpsList({
                   : "text-muted hover:text-foreground",
               )}
             >
-              {t.label} <span className="text-accent">{t.count}</span>
+              {t.label} {t.count && <span className="text-accent">{t.count}</span>}
             </button>
           ))}
         </div>
@@ -137,7 +145,17 @@ export function OpsList({
         </ul>
       )}
 
-      <ul role="tabpanel" className="max-h-[min(13rem,26vh)] overflow-y-auto">
+      {tab === "schedule" && (
+        <div role="tabpanel" className="max-h-[min(16rem,32vh)] overflow-y-auto">
+          <DockSchedule scene={scene} nowMs={nowMs} selection={selection} onSelect={onSelect} />
+        </div>
+      )}
+
+      <ul
+        role={tab === "schedule" ? undefined : "tabpanel"}
+        hidden={tab === "schedule"}
+        className="max-h-[min(13rem,26vh)] overflow-y-auto"
+      >
         {tab === "docks" &&
           scene.docks.map((dock) => {
             const visit = scene.visits.find((v) => v.id === dock.visitId);

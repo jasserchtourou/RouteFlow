@@ -13,7 +13,7 @@ jobs:
         working-directory: backend
     services:
       postgres:
-        image: pgvector/pgvector:pg16
+        image: postgres:16
         env:
           POSTGRES_USER: routeflow
           POSTGRES_PASSWORD: change-me

@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
-from sqlalchemy import inspect, select, text
+from sqlalchemy import inspect, select
 from sqlalchemy.engine import Connection
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
@@ -26,13 +26,6 @@ async def test_migrations_match_models(connection: AsyncConnection) -> None:
         return list(compare_metadata(context, Base.metadata))
 
     assert await connection.run_sync(diff) == []
-
-
-async def test_pgvector_extension_is_installed(session: AsyncSession) -> None:
-    assert (
-        await session.scalar(text("SELECT count(*) FROM pg_extension WHERE extname = 'vector'"))
-        == 1
-    )
 
 
 async def test_all_foreign_keys_are_indexed(connection: AsyncConnection) -> None:

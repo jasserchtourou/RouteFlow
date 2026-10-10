@@ -12,7 +12,7 @@ export function Topbar({
   onToggleSidebar: () => void;
 }) {
   return (
-    <header className="flex h-14 items-center gap-3 border-b border-border bg-surface px-4">
+    <header className="relative z-10 flex h-14 items-center gap-3 border-b border-border bg-surface/80 px-4 backdrop-blur-md">
       <button
         type="button"
         onClick={onMenu}

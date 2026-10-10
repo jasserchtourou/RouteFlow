@@ -44,7 +44,9 @@ export const WAREHOUSES: WarehouseMapResponse[] = [
     location: "Garbsen",
     latitude: 52.42,
     longitude: 9.6,
+    capacity: 36000,
     utilization_pct: 96.2,
+    low_stock_count: 9,
     status: "DISRUPTED",
   },
 ];

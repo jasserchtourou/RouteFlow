@@ -27,7 +27,10 @@ export interface MapWarehouse {
   city: string;
   lat: number;
   lng: number;
+  /** Pallet positions. */
+  capacity: number;
   utilizationPct: number;
+  lowStockCount: number;
   status: "OPERATIONAL" | "CONGESTED" | "DISRUPTED" | "OFFLINE";
 }
 

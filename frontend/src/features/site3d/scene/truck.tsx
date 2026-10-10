@@ -99,10 +99,44 @@ export function Truck({
         <boxGeometry args={[2.3, 2.1, 2.5]} />
         <meshStandardMaterial color={palette.cab} />
       </mesh>
-      <mesh position={[4.28, 1.9, 0]}>
-        <boxGeometry args={[0.06, 0.8, 2.1]} />
+      {/* Windscreen, side windows, roof fairing, mirrors */}
+      <mesh position={[4.27, 2.05, 0]}>
+        <boxGeometry args={[0.04, 0.85, 2.2]} />
+        <meshStandardMaterial color={palette.glass} metalness={0.7} roughness={0.15} />
+      </mesh>
+      {[-1, 1].map((side) => (
+        <mesh key={side} position={[3.55, 2.1, side * 1.26]}>
+          <boxGeometry args={[0.9, 0.7, 0.02]} />
+          <meshStandardMaterial color={palette.glass} metalness={0.7} roughness={0.15} />
+        </mesh>
+      ))}
+      <mesh position={[2.85, 2.95, 0]} rotation-z={-0.35} castShadow>
+        <boxGeometry args={[1.5, 0.12, 2.3]} />
+        <meshStandardMaterial color={palette.cab} />
+      </mesh>
+      {[-1, 1].map((side) => (
+        <mesh key={side} position={[4.1, 2.15, side * 1.45]}>
+          <boxGeometry args={[0.08, 0.4, 0.12]} />
+          <meshStandardMaterial color={palette.wheel} />
+        </mesh>
+      ))}
+      {/* Grille, headlights and tail lights */}
+      <mesh position={[4.28, 1.05, 0]}>
+        <boxGeometry args={[0.05, 0.55, 1.4]} />
         <meshStandardMaterial color={palette.wheel} />
       </mesh>
+      {[-0.95, 0.95].map((z) => (
+        <mesh key={`h${z}`} position={[4.29, 0.95, z]}>
+          <boxGeometry args={[0.04, 0.22, 0.4]} />
+          <meshBasicMaterial color={palette.lamp} toneMapped={false} />
+        </mesh>
+      ))}
+      {[-1.05, 1.05].map((z) => (
+        <mesh key={`t${z}`} position={[-4.62, 0.95, z]}>
+          <boxGeometry args={[0.04, 0.16, 0.3]} />
+          <meshBasicMaterial color="#ff4d4d" toneMapped={false} />
+        </mesh>
+      ))}
       {WHEELS.map(([x, z]) => (
         <mesh key={`${x}/${z}`} position={[x, 0.5, z]} rotation-x={Math.PI / 2} castShadow>
           <cylinderGeometry args={[0.5, 0.5, 0.45, 14]} />

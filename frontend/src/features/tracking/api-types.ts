@@ -19,6 +19,8 @@ export interface WarehouseMapResponse {
   location: string;
   latitude: number;
   longitude: number;
+  capacity: number;
   utilization_pct: number;
+  low_stock_count: number;
   status: "OPERATIONAL" | "CONGESTED" | "DISRUPTED" | "OFFLINE";
 }

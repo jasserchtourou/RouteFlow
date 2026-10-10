@@ -5,6 +5,8 @@ import { vi } from "vitest";
 import { DashboardView } from "@/features/dashboard/dashboard-view";
 import { EMPTY_PAGE, EXCEPTIONS, NOW, OVERVIEW, SHIPMENTS } from "./fixtures/api";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 function routeFetch(handlers: Record<string, () => Response>) {
   const fn = vi.fn((input: string | URL | Request) => {
     const path = new URL(String(input)).pathname.replace("/api/v1", "");

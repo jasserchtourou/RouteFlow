@@ -24,7 +24,6 @@ describe("NAV_ITEMS", () => {
       "/routes",
       "/tracking",
       "/events",
-      "/ai",
     ]);
   });
 });

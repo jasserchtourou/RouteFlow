@@ -22,46 +22,6 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # pgvector powers the knowledge-base embeddings (added in the RAG phase).
-    op.execute("CREATE EXTENSION IF NOT EXISTS vector")
-
-    op.create_table(
-        "documents",
-        sa.Column("title", sa.String(length=200), nullable=False),
-        sa.Column("content", sa.Text(), nullable=False),
-        sa.Column(
-            "document_type",
-            sa.Enum(
-                "PROCEDURE",
-                "POLICY",
-                "GUIDELINE",
-                "SLA",
-                name="document_type",
-                native_enum=False,
-                length=32,
-            ),
-            nullable=False,
-        ),
-        sa.Column("source", sa.String(length=200), nullable=False),
-        sa.Column("id", sa.Uuid(), server_default=sa.text("gen_random_uuid()"), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.CheckConstraint(
-            "document_type IN ('PROCEDURE', 'POLICY', 'GUIDELINE', 'SLA')",
-            name=op.f("ck_documents_document_type_valid"),
-        ),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_documents")),
-    )
     op.create_table(
         "drivers",
         sa.Column("full_name", sa.String(length=120), nullable=False),
@@ -664,5 +624,4 @@ def downgrade() -> None:
     op.drop_index("ix_orders_created_at", table_name="orders")
     op.drop_table("orders")
     op.drop_table("drivers")
-    op.drop_table("documents")
     # ### end Alembic commands ###

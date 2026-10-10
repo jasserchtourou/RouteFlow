@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { AdditiveBlending } from "three";
 import {
   BAY_Z,
   FACADE_Z,
@@ -65,6 +66,37 @@ function Tree({ x, z, scale, palette }: { x: number; z: number; scale: number; p
   );
 }
 
+/** Street lamp: pole, arm and a glowing head with a soft pool of light on the ground. */
+function Lamp({ x, z, palette }: { x: number; z: number; palette: Palette }) {
+  return (
+    <group position={[x, 0, z]}>
+      <mesh position={[0, 2.2, 0]} castShadow>
+        <cylinderGeometry args={[0.08, 0.11, 4.4, 8]} />
+        <meshStandardMaterial color={palette.fence} />
+      </mesh>
+      <mesh position={[0, 4.35, 0.5]}>
+        <boxGeometry args={[0.12, 0.1, 1.1]} />
+        <meshStandardMaterial color={palette.fence} />
+      </mesh>
+      <mesh position={[0, 4.25, 1]}>
+        <boxGeometry args={[0.45, 0.14, 0.6]} />
+        <meshBasicMaterial color={palette.lamp} toneMapped={false} />
+      </mesh>
+      <mesh position={[0, 0.04, 1.4]} rotation-x={-Math.PI / 2}>
+        <circleGeometry args={[2.6, 28]} />
+        <meshBasicMaterial
+          color={palette.lamp}
+          transparent
+          opacity={0.16}
+          depthWrite={false}
+          blending={AdditiveBlending}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 export function Environment({
   dockCount,
   yardSlots,
@@ -81,13 +113,26 @@ export function Environment({
     [yardSlots, dockCount],
   );
   const trees = useMemo(() => {
-    // Deterministic scatter along the back and the sides of the site.
-    return Array.from({ length: 9 }, (_, i) => ({
+    // Deterministic scatter along the back of the site, plus a row down each side.
+    const back = Array.from({ length: 9 }, (_, i) => ({
       x: -half + 3 + (i * (width - 6)) / 8,
       z: -22 - (i % 3) * 2.5,
       scale: 0.8 + (i % 4) * 0.15,
     }));
+    const sides = Array.from({ length: 8 }, (_, i) => ({
+      x: (i % 2 === 0 ? -1 : 1) * (half + 4 + (i % 3)),
+      z: -14 + Math.floor(i / 2) * 7,
+      scale: 0.7 + (i % 3) * 0.15,
+    }));
+    return [...back, ...sides];
   }, [half, width]);
+  const lamps = useMemo(
+    () =>
+      Array.from({ length: Math.floor((half * 2) / 12) + 1 }, (_, i) => -half + 4 + i * 12).filter(
+        (x) => x < half - 2,
+      ),
+    [half],
+  );
   const fencePosts = useMemo(
     () =>
       Array.from({ length: Math.floor(FENCE_LENGTH / 3) + 1 }, (_, i) => -FENCE_LENGTH / 2 + i * 3),
@@ -161,6 +206,11 @@ export function Environment({
 
       {trees.map((tree, i) => (
         <Tree key={i} {...tree} palette={palette} />
+      ))}
+
+      {/* Lamps along the yard edge of the road, lighting the carriageway */}
+      {lamps.map((x) => (
+        <Lamp key={x} x={x} z={ROAD_Z - ROAD_HALF_WIDTH - 0.8} palette={palette} />
       ))}
     </group>
   );

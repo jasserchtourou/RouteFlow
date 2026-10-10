@@ -24,8 +24,14 @@ export interface Palette {
   select: string;
   warning: string;
   doorState: Record<"AVAILABLE" | "BOOKED" | "OCCUPIED" | "OUT_OF_SERVICE", string>;
+  /** Window glass, lamp heads and the sky colour of the hemisphere light. */
+  glass: string;
+  lamp: string;
+  sky: string;
   ambient: number;
   sun: number;
+  /** Strength of the sky/ground fill light. */
+  hemi: number;
 }
 
 export const NIGHT: Palette = {
@@ -57,8 +63,12 @@ export const NIGHT: Palette = {
     OCCUPIED: "#f87171",
     OUT_OF_SERVICE: "#566083",
   },
-  ambient: 0.65,
+  glass: "#16233f",
+  lamp: "#ffd88a",
+  sky: "#9db7ff",
+  ambient: 0.45,
   sun: 1.1,
+  hemi: 0.45,
 };
 
 export const DAY: Palette = {
@@ -90,8 +100,12 @@ export const DAY: Palette = {
     OCCUPIED: "#ee6b6b",
     OUT_OF_SERVICE: "#9aa3bd",
   },
-  ambient: 0.9,
-  sun: 1.3,
+  glass: "#9fc2ff",
+  lamp: "#fff3d0",
+  sky: "#ffffff",
+  ambient: 0.6,
+  sun: 1.35,
+  hemi: 0.5,
 };
 
 export type ThemeName = "night" | "day";
